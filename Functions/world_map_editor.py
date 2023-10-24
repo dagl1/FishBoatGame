@@ -3,6 +3,10 @@ import numpy as np
 import os
 import math
 import json
+import time
+from datetime import datetime
+
+
 
 
 def create_dictionary_from_image_name(world_map_img_location_file,
@@ -13,7 +17,7 @@ def create_dictionary_from_image_name(world_map_img_location_file,
     parts = image_name[0].split("_")
 
     if len(parts) != 7:
-        raise ValueError("Invalid image name format: " + image_name)
+        raise ValueError("Invalid image name format: " + image_name[0])
 
         # Extract the relevant information from the image name
     wm, p, tile_type, name, number, x, y = parts
@@ -200,6 +204,7 @@ def set_state_of_editor(option):  # will determine if we are in map select, or e
     elif option == 'world_map_menu_screen':
         editor_state_ = 3
 
+
     return editor_state_
 
 
@@ -226,31 +231,37 @@ def calculate_main_rect_editor():
 
 
 class SelectionMaps:
-    def __init__(self, map_name, position_in_row, wrapper_rect, min_row_height_):
+    def __init__(self, map_name, position_in_row, wrapper_rect, min_row_height_, current_objects):
         self.map_name = map_name
         self.text_x = wrapper_rect.left + (wrapper_rect.width - 300) // 2
         self.text_y = wrapper_rect.top + position_in_row * min_row_height_ + 20
         self.delete_button = Button((wrapper_rect.left + wrapper_rect.width - 100, (position_in_row + 1) * min_row_height_ - 40, 100, 40),
-                                    "Delete", (255, 0, 0), 'Delete Map', self)
+                                    "Delete", (255, 0, 0), 'Delete Map', self, current_objects)
         self.edit_name_button = Button((wrapper_rect.left + wrapper_rect.width - 220, (position_in_row + 1) * min_row_height_ - 40, 100, 40),
-                                       "Edit Map", (0, 255, 0), 'Edit Map', self)
+                                       "Edit Map", (0, 255, 0), 'Edit Map', self, current_objects)
         self.edit_map_button = Button((wrapper_rect.left + wrapper_rect.width - 240, (position_in_row + 1) * min_row_height_ - 40, 100, 40),
-                                      "Change Name", (0, 0, 255), 'Edit Map_Name', self)
+                                      "Change Name", (0, 0, 255), 'Edit Map_Name', self, current_objects)
         self.font = pygame.font.Font(None, 36)
         self.text_color = (0, 0, 0)
         # self.preview_selection = preview_selection
 
     def draw(self, surface):
         map_name_text = self.font.render(self.map_name, True, self.text_color)
-        screen.blit(map_name_text, (self.text_x, self.text_y))
+        surface.blit(map_name_text, (self.text_x, self.text_y))
         self.delete_button.draw(surface)
         self.edit_name_button.draw(surface)
         self.edit_map_button.draw(surface)
 
+    def handle_event(self, event_):
+        self.delete_button.handle_event(event_)
+        self.edit_name_button.handle_event(event_)
+        self.edit_map_button.handle_event(event_)
+
+
 
 class CreateNewMap(SelectionMaps):
-    def __init__(self, map_name, position_in_row, wrapper_rect, min_row_height_):
-        super().__init__("Create new map", 0, wrapper_rect, min_row_height_)
+    def __init__(self, map_name, position_in_row, wrapper_rect, min_row_height_,current_objects):
+        super().__init__("Create new map", 0, wrapper_rect, min_row_height_, current_objects)
         self.font = pygame.font.Font(None, 58)
         # Remove the unnecessary buttons
         del self.delete_button
@@ -259,16 +270,19 @@ class CreateNewMap(SelectionMaps):
 
         # Create a single "Create Map" button
         self.create_map_button = Button((wrapper_rect.left + wrapper_rect.width - 300, (position_in_row+1) * min_row_height_ +50, 150, 40),
-                                        "Create Map", (0, 255, 0), 'Create Map', self)
+                                        "Create Map", (0, 255, 0), 'Create Map', self,current_objects)
 
     def draw(self, surface):
         map_name_text = self.font.render(self.map_name, True, self.text_color)
-        screen.blit(map_name_text, (self.text_x, self.text_y))
+        surface.blit(map_name_text, (self.text_x, self.text_y))
         self.create_map_button.draw(surface)
+
+    def handle_events(self,event_):
+        self.create_map_button.handle_event(event_)
 
 
 class Button:
-    def __init__(self, rect, label, button_color=(0, 0, 255), button_type=None, button_object=None):
+    def __init__(self, rect, label, button_color=(0, 0, 255), button_type=None, button_object=None, current_objects=None):
         self.rect = pygame.Rect(rect)
         self.label = label
         self.button_color = button_color
@@ -279,7 +293,7 @@ class Button:
         self.text_y = self.rect.centery - self.text_surface.get_height() / 2
         self.button_object = button_object
         self.button_type = button_type
-
+        self.current_objects = current_objects
     def draw(self, surface):
         # Draw the button's rectangle
         pygame.draw.rect(surface, self.button_color, self.rect)
@@ -295,61 +309,111 @@ class Button:
                 elif self.button_type == 'Edit Map' and self.button_object is not None:
                     pass
                 elif self.button_type == 'Edit Map_Name' and self.button_object is not None:
-                    pass
+                    set_state_of_editor('change map name popup')
+                    create_popup_change_name_menu()
+                    print('button pressed')
+
                 elif self.button_type == 'Create Map' and self.button_object is not None:
-                    pass
+                    print('button Create Map pressed')
+                    self.current_objects.load_empty_map_to_current()
 
     #
     # showingMap1 = Selection_maps(currently_selected_maps[0],1, main_rect, min_row_height)
     # showingMap2 = Selection_maps(currently_selected_maps[1],2, main_rect, min_row_height)
     # showingMap3 = Selection_maps(currently_selected_maps[2],3, main_rect, min_row_height)
     #
-
-
-def initialize_selected_maps(available_maps_, min_row_height_, amount_of_rows_):
-    selected_maps_ = [CreateNewMap("Create NEW MAP", 0,main_rect,min_row_height_ )]
-    if len(available_maps_) >= amount_of_rows_:
-        amount_of_maps_to_add = amount_of_rows_
-    else:
-        amount_of_maps_to_add = len(available_maps_)
-    for iterator_available_map in range(amount_of_maps_to_add):
-        name = available_maps_[[iterator_available_map]]
-        selected_maps_.append(SelectionMaps(name, iterator_available_map + 1, main_rect, min_row_height_))
-    return selected_maps_
-
-
-# big rectangle
-# Rectangle for holding already existing maps
-# Scroll bar
-# create new map option at top
-# some text
-
-def draw_options_on_screen(currently_selected_maps_, min_row_height_, amount_of_rows_):
-    pygame.draw.rect(screen, (255, 255, 255), main_rect)
-    # Draw the divisions for the rows
-    for i in range(1, amount_of_rows_):
-        pygame.draw.line(screen, (0, 0, 0), (main_rect.left, main_rect.top + i * min_row_height_),
-                         (main_rect.left + main_rect.width, main_rect.top + i * min_row_height_), 2)
-
-    # if len(currently_selected_maps_) >= amount_of_rows_ - 1:  # -1 since the first is reseverd for the create empty map
-    #     amount_of_maps_to_show = amount_of_rows_ - 1  #
-    # else:
-    #     amount_of_maps_to_show = len(currently_selected_maps_)
-
-    for selected_map in currently_selected_maps_[0:amount_of_rows_]:
-
-        selected_map.draw(screen)
-
-
-def handle_clicking_on_options(currently_selected_maps_):
+def create_popup_change_name_menu():
     pass
 
+class PopUpScreen:
+    def __init__(self):
+        pass
 
-def choose_from_available_world_maps(currently_selected_maps_, min_row_height_, amount_of_rows_):
-    draw_options_on_screen(currently_selected_maps_, min_row_height_, amount_of_rows_)
-    handle_clicking_on_options(currently_selected_maps_)
-    # load_selected_world_map()
-    # create_new_empty_world_map()
+class MapSelectionOptions:
+    def __init__(self, min_row_height_, amount_of_rows_, main_rect_, color=(255, 255, 255),current_objects = None):
+        self.min_row_height_ = min_row_height_
+        self.amount_of_rows_ = amount_of_rows_
+        self.main_rect_ = main_rect_
+        self.color = color
+        self.current_objects = current_objects
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.main_rect_)
+        for i in range(1, self.amount_of_rows_):
+            pygame.draw.line(surface, (0, 0, 0), (self.main_rect_.left, self.main_rect_.top + i * self.min_row_height_),
+                             (self.main_rect_.left + self.main_rect_.width, self.main_rect_.top + i * self.min_row_height_), 2)
+
+    def handle_events(self, event_):
+        pass
+
+class WorldMap:
+
+    def __init__(self):
+        pass
+
+    def load_world_map_from_json(self, location_):
+        pass
+
+    def create_empty_world_map(self, name="New Map", size=(10240, 10240)):
+        self.size = size
+        self.name = name
+        self.last_edited = datetime(1, 1, 1, 0, 0, 0).strftime("%d/%m/%Y %H:%M:%S") # placeholder
+        self.time_created = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+
+    def save_world_map_to_json(self):
+        pass
+
+    #time created
+
+class CurrentObjects:
+    def __init__(self, available_maps_, min_row_height_, amount_of_rows_):
+        self.selected_maps = self.initialize_selected_maps(available_maps_, min_row_height_, amount_of_rows_)
+        self.currently_interatable_objects = self.selected_maps
+        self.currently_drawn_objects = self.selected_maps
+        self.screen = pygame.display.set_mode([WIDTH, HEIGHT])
+        self.background = PLACEHOLDER_BACKGROUND
+        self.run = True
+        self.editor_state = 1
+
+    def add_to_drawn_objects_list(self, object_to_add, put_to_front=False):
+        if put_to_front:
+            self.currently_drawn_objects.insert(0, object_to_add)
+        else:
+            self.currently_drawn_objects.append(object_to_add)
+
+    def add_to_interactable_list_list(self, object_to_add, put_to_front=False):
+        if put_to_front:
+            self.currently_interatable_objects.insert(0, object_to_add)
+        else:
+            self.currently_interatable_objects.append(object_to_add)
+
+    def perform_loop_actions(self):  # checks the currently drawn and interactable objects and runs their draw and handle_events code
+        self.screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.run = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.run = False  # Exit the game when the Escape key is pressed
+            for interactable in self.currently_interatable_objects:
+                interactable.handle_events(event)
+
+        for drawable in self.currently_drawn_objects:
+            drawable.draw(self.screen)
+
+    def initialize_selected_maps(self,available_maps_, min_row_height_, amount_of_rows_):
+        selected_maps_ = [CreateNewMap("Create NEW MAP", 0,main_rect,min_row_height_ ,self)]
+        if len(available_maps_)>0:
+            for iterator_available_map in range(amount_of_rows_-1):
+                if len(available_maps_) <= iterator_available_map:
+                    name = available_maps_[iterator_available_map]
+                    selected_maps_.append(SelectionMaps(name, iterator_available_map + 1, main_rect, min_row_height_, self))
+        return selected_maps_
+
+    def load_empty_map_to_current(self):
+        print('dddd')
 
 
 # ### TEST CODE create_map_from_images
@@ -376,71 +440,74 @@ def choose_from_available_world_maps(currently_selected_maps_, min_row_height_, 
 # if so, add in the image. On the next loop, check the map array again to find new empty places
 
 
+
+
+
+
 pygame.init()
 
 WIDTH = 1800
 HEIGHT = 900
 screen_info = pygame.display.Info()
-# WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
+#WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
 
 TILE_SIZE_WORLD = 50
 TILE_SIZE_EDITOR = 100
 SCALES = (100, 100)
-screen = pygame.display.set_mode([WIDTH, HEIGHT])
 fps = 60
 timer = pygame.time.Clock()
 pygame.display.set_caption('World Map Editor')
 
 parent_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-PLACEHOLDER_BACKGROUND = pygame.transform.scale(pygame.image.load(os.path.join(parent_directory, 'Assets/Images/Backgrounds/PLACEHOLDER_STOCK_WATER.png')),
-                                                (WIDTH, HEIGHT))
 world_map_img_location = os.path.join(parent_directory, 'Assets/Images/World_Map_Static/')
-# print(world_map_img_location)
+available_maps_location = os.path.join(parent_directory, 'Assets/Maps/World_Maps/')
+
 img_scale_type_dict = check_and_load_image_dict(world_map_img_location)
 map_array = create_map_from_images(img_scale_type_dict, HEIGHT, TILE_SIZE_EDITOR)
-
-available_maps_location = os.path.join(parent_directory, 'Assets/Maps/World_Maps/')
 available_maps = check_available_world_maps(available_maps_location)
-print(available_maps)
-editor_state = set_state_of_editor('world_map_selector')
 
+PLACEHOLDER_BACKGROUND = pygame.transform.scale(pygame.image.load(os.path.join(parent_directory, 'Assets/Images/Backgrounds/PLACEHOLDER_STOCK_WATER.png')),
+                                                (WIDTH, HEIGHT))
 main_rect = calculate_main_rect_editor()
+
 AMOUNT_OF_ROWS_TO_SHOW = 4
-MINIMAL_ROW_SIZE_IN_PIXELS = 160
+MINIMAL_ROW_SIZE_IN_PIXELS = 157
 min_row_height = max(MINIMAL_ROW_SIZE_IN_PIXELS, main_rect.height // AMOUNT_OF_ROWS_TO_SHOW)
-amount_of_rows = math.ceil(main_rect.height / min_row_height)
-currently_selected_maps = initialize_selected_maps(available_maps, min_row_height, amount_of_rows)
-print(currently_selected_maps)
+amount_of_rows = math.floor(main_rect.height / min_row_height)
+
+main_current_object = CurrentObjects(available_maps, min_row_height, amount_of_rows)
+main_current_object.add_to_drawn_objects_list(MapSelectionOptions(min_row_height,amount_of_rows,main_rect),True,)
+
+
 
 run = True
-while run:
+while main_current_object.run:
     timer.tick(fps)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                run = False  # Exit the game when the Escape key is pressed
-
-    if editor_state == 1:  # world_map_selector
-        screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
-        choose_from_available_world_maps(currently_selected_maps, min_row_height, amount_of_rows)
-        # load map to current map for editing
+    main_current_object.perform_loop_actions()
 
 
-    elif editor_state == 3:  # opened loading menu
-        pass  # keep
-        draw_map_specific_background(background)
-        draw_map_to_screen(map_array)
-        draw_loading_menu_on_top_of_screen()
-        allow_interaction_loading_menu()
 
-    elif editor_state == 2:  # main editing mode:
-        pass  # main code
-        draw_map_specific_background(background)
-        screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
-        draw_map_to_screen(map_array)
-        allow_interaction_editor()
+
+
+    # if editor_state == 1:  # world_map_selector
+    #     screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
+    #     choose_from_available_world_maps(currently_selected_maps, min_row_height, amount_of_rows)
+    #     # load map to current map for editing
+    #
+    #
+    # elif editor_state == 3:  # opened loading menu
+    #     pass  # keep
+    #     draw_map_specific_background(background)
+    #     draw_map_to_screen(map_array)
+    #     draw_loading_menu_on_top_of_screen()
+    #     allow_interaction_loading_menu()
+    #
+    # elif editor_state == 2:  # main editing mode:
+    #     pass  # main code
+    #     draw_map_specific_background(background)
+    #     screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
+    #     draw_map_to_screen(map_array)
+    #     allow_interaction_editor()
 
     # Update the display
     pygame.display.flip()
