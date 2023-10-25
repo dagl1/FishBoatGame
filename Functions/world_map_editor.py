@@ -348,23 +348,138 @@ class MapSelectionOptions:
 
 class WorldMap:
 
-    def __init__(self):
-        pass
+    def __init__(self, current_object,image_dict):
+        self.size = None
+        self.name = None
+        self.last_edited = None
+        self.time_created = None
+        self.tile_map = None
+        self.asset_map = None
+        self.current_object = current_object
+        self.image_dict = image_dict
+        self.grid_portion_on_screen = np.zeros((1,1))
+        self.xbounds = slice(1,2)
+        self.ybounds = slice(1,2)
 
-    def load_world_map_from_json(self, location_):
-        pass
+        self.new_tile_size = TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.amount_of_tiles_shown_on_screen_width = math.floor(WIDTH//self.new_tile_size)
+        self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT//self.new_tile_size)
 
     def create_empty_world_map(self, name="New Map", size=(10240, 10240)):
         self.size = size
         self.name = name
-        self.last_edited = datetime(1, 1, 1, 0, 0, 0).strftime("%d/%m/%Y %H:%M:%S") # placeholder
+        self.last_edited =  datetime.now().strftime("%d/%m/%Y %H:%M:%S") # placeholder
         self.time_created = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.tile_map = np.zeros(self.size)
+        self.asset_map = np.zeros(self.size)
 
+    def load_world_map_from_json(self, location_):
+        pass
+        ## This function requires some changes to how things are shown/saved, which requires modification of how the availalbe maps are loaded
+        # In particular, the buttons, and therefore the maps,  need to have both the name and the path of the map separately accesible
+        # location_ = location_ + self.name  + ".json"
+        # with open(location_, 'r') as json_file:
+        #     data = json.load(json_file)
+        #     self.size = tuple(data['size'])
+        #     self.name = data['name']
+        #     self.last_edited = data['last_edited']
+        #     self.time_created = data['time_created']
+        #     self.tile_map = np.array(data['tile_map'])
+        #     self.asset_map = np.array(data['asset_map'])
 
-    def save_world_map_to_json(self):
+    def save_world_map_to_json(self, location_):
+        location_ = location_ + self.name + ".json"
+        data = {
+            'size': list(self.size),
+            'name': self.name,
+            'last_edited': self.last_edited,
+            'time_created': self.time_created,
+            'tile_map': self.tile_map.tolist(),
+            'asset_map': self.asset_map.tolist()
+        }
+
+        with open(location_, 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+    def draw(self,surface):
+
         pass
 
-    #time created
+    def load_objects_to_currently_drawn_map(self, tile_coordinates):
+
+        pass
+
+    def unload_objects_from_currently_drawn_map(self, tile_coordinates):
+        pass
+
+    def update_loaded_objects_in_currently_drawn_map(self):
+        #check which tiles to add
+        #check which tiles to remove
+        self.load_tiles_to_currently_drawn_map()
+        self.unload_tiles_from_currently_drawn_map()
+        pass
+
+    def define_bounds_of_currently_drawn_map(self): # initalize the current grid (also used when zoom level is changed
+        self.new_tile_size = TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.amount_of_tiles_shown_on_screen_width = math.floor(WIDTH // self.new_tile_size)
+        self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
+
+        x, y, width, height = self.calculate_bounds()
+        # Create xbounds and ybounds
+        self.xbounds = slice(x, x + width)
+        self.ybounds = slice(y, y + height)
+
+
+        self.load_objects_to_currently_drawn_map((self.xbounds,self.ybounds)) ## Initialize the tiles/objects
+
+    def calculate_bounds(self):
+        x = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y = self.current_object.location_of_screen_on_map_and_zoom_level[1]
+        width = self.amount_of_tiles_shown_on_screen_width
+        height = self.amount_of_tiles_shown_on_screen_height
+
+        return x, y, width, height
+    def update_map_bounds(self):
+
+        xchange = self.location_of_screen_on_map_and_zoom_level[0] - self.OLD_location_of_screen_on_map_and_zoom_level[0]
+        ychange = self.location_of_screen_on_map_and_zoom_level[1] - self.OLD_location_of_screen_on_map_and_zoom_level[1]
+
+        if xchange != 0:
+            if xchange > 0:
+                new_colums_x = slice(xchange+self.xbounds.stop, xchange+self.xbounds.stop+1)
+                to_remove_columns_x = slice(xchange+self.xbounds.start, xchange+self.xbounds.start+1)
+            elif xchange < 0:
+                new_colums_x = slice(self.xbounds.start + xchange , self.xbounds.start + xchange + 1)
+                to_remove_columns_x = slice(self.xbounds.stop + xchange,  self.xbounds.stop + xchange + 1)
+            new_columns = (new_colums_x, self.ybounds)
+            to_remove_columns = (to_remove_columns_x, self.ybounds)
+
+            self.load_objects_to_currently_drawn_map(new_columns)
+            self.unload_objects_from_currently_drawn_map(to_remove_columns)
+            self.xbounds = slice(self.xbounds.start + xchange,self.xbounds.stop + xchange)
+
+        if ychange != 0:
+            if ychange > 0:
+                new_rows_y = slice(self.ybounds.start, self.ybounds.stop + ychange)
+                to_remove_rows_y = slice(self.ybounds.start, self.ybounds.start + ychange)
+            elif ychange < 0:
+                new_rows_y = slice(self.ybounds.start + ychange, self.ybounds.stop)
+                to_remove_rows_y = slice(self.ybounds.stop + ychange, self.ybounds.stop)
+            new_rows = (self.xbounds, new_rows_y)
+            to_remove_rows = (self.xbounds, to_remove_rows_y)
+
+            self.load_objects_to_currently_drawn_map(new_rows)
+            self.unload_objects_from_currently_drawn_map(to_remove_rows)
+            self.ybounds = slice(self.ybounds.start + xchange, self.ybounds.stop + xchange)
+
+
+
+
+
+
+
+
+
+
 
 class CurrentObjects:
     def __init__(self, available_maps_, min_row_height_, amount_of_rows_):
@@ -375,6 +490,9 @@ class CurrentObjects:
         self.background = PLACEHOLDER_BACKGROUND
         self.run = True
         self.editor_state = 1
+        self.location_of_screen_on_map_and_zoom_level = (3000, 3000, 5) #5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
+        self.OLD_location_of_screen_on_map_and_zoom_level = (3000, 3000, 5) #zoom of 5 means that the regular tile size is 5 times smaller than what it will be
+
 
     def add_to_drawn_objects_list(self, object_to_add, put_to_front=False):
         if put_to_front:
