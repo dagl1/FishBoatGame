@@ -401,10 +401,32 @@ class WorldMap:
         with open(location_, 'w') as json_file:
             json.dump(data, json_file, indent=4)
     def draw(self,surface):
-
         pass
 
-    def load_objects_to_currently_drawn_map(self, tile_coordinates):
+    def load_objects_to_currently_drawn_map(self, tile_coordinates, img_scale_type_dict):
+
+        # Check the IDs given in each location in the tile_coordinates on both the  self.tile_map and  self.asset_map, find all the unique ids, check which ones
+        # which ones are already present in currently_loaded_objects, and only load the ones that aren't there yet. create for each unique id (corresponding to
+        # an object we are going to draw later, also the positions where they should be drawn, this should be updated also for non-unique ids that were already loaded
+        object_positions = {}
+
+        for tile_coord in tile_coordinates:
+            # Extract the unique ID from self.tile_map and self.asset_map
+            unique_id = self.tile_map[tile_coord]
+
+            # Check if the object with this unique ID is already loaded
+            if unique_id not in object_positions:
+                # Load the object if it's not loaded
+                if unique_id not in img_scale_type_dict:
+                    img_scale_type_dict[unique_id] = img_scale_type_dict[unique_id]['image']
+
+                # Create a list to store the positions where this object should be drawn
+                object_positions[unique_id] = []
+
+            # Add the current tile's coordinates to the object's position list
+            object_positions[unique_id].append(tile_coord)
+
+
 
         pass
 
@@ -440,8 +462,8 @@ class WorldMap:
         return x, y, width, height
     def update_map_bounds(self):
 
-        xchange = self.location_of_screen_on_map_and_zoom_level[0] - self.OLD_location_of_screen_on_map_and_zoom_level[0]
-        ychange = self.location_of_screen_on_map_and_zoom_level[1] - self.OLD_location_of_screen_on_map_and_zoom_level[1]
+        xchange = self.current_object.location_of_screen_on_map_and_zoom_level[0] - self.current_object.OLD_location_of_screen_on_map_and_zoom_level[0]
+        ychange = self.current_object.location_of_screen_on_map_and_zoom_level[1] - self.current_object.OLD_location_of_screen_on_map_and_zoom_level[1]
 
         if xchange != 0:
             if xchange > 0:
