@@ -360,17 +360,18 @@ class WorldMap:
         self.grid_portion_on_screen = np.zeros((1,1))
         self.xbounds = slice(1,2)
         self.ybounds = slice(1,2)
-
-        self.new_tile_size = TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.tile_positions = {}
+        self.asset_positions = {}
+        self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
         self.amount_of_tiles_shown_on_screen_width = math.floor(WIDTH//self.new_tile_size)
         self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT//self.new_tile_size)
 
     def create_empty_world_map(self, name="New Map", size=(10240, 10240)):
         self.size = size
         self.name = name
-        self.last_edited =  datetime.now().strftime("%d/%m/%Y %H:%M:%S") # placeholder
+        self.last_edited = datetime.now().strftime("%d/%m/%Y %H:%M:%S") # placeholder
         self.time_created = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        self.tile_map = np.zeros(self.size)
+        self.tile_map = np.ones(self.size)
         self.asset_map = np.zeros(self.size)
 
     def load_world_map_from_json(self, location_):
@@ -401,50 +402,134 @@ class WorldMap:
         with open(location_, 'w') as json_file:
             json.dump(data, json_file, indent=4)
     def draw(self,surface):
-        pass
 
-    def load_objects_to_currently_drawn_map(self, tile_coordinates, img_scale_type_dict):
+        x_start = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y_start = self.current_object.location_of_screen_on_map_and_zoom_level[1]
+        #zoom_level = self.current_object.location_of_screen_on_map_and_zoom_level[2]
+
+
+        placeholder_rect = pygame.Surface((self.new_tile_size, self.new_tile_size))
+        placeholder_rect.fill((255, 0, 255))
+
+        for unique_id, positions in self.tile_positions.items():
+            loaded_image = positions["image"]
+           # print(loaded_image)
+            if loaded_image == None:
+                loaded_image = placeholder_rect
+           #positions["positions"] print(len(positions["positions"]))
+            for x, y in positions["positions"]:
+                surface.blit(loaded_image, (self.new_tile_size *(x - x_start), self.new_tile_size *(y - y_start)))
+
+
+        for unique_id, positions in  self.asset_positions.items():
+            loaded_image = positions["image"]
+            if loaded_image == None:
+                loaded_image = placeholder_rect ## Need to add empty asset placeholder
+            else:
+                for x, y in positions["positions"]:
+                    surface.blit(loaded_image, (self.new_tile_size *(x - x_start), self.new_tile_size *(y - y_start)))
+                    a = 5
+
+
+    def load_objects_to_currently_drawn_map(self, tile_coordinates):
 
         # Check the IDs given in each location in the tile_coordinates on both the  self.tile_map and  self.asset_map, find all the unique ids, check which ones
         # which ones are already present in currently_loaded_objects, and only load the ones that aren't there yet. create for each unique id (corresponding to
         # an object we are going to draw later, also the positions where they should be drawn, this should be updated also for non-unique ids that were already loaded
-        object_positions = {}
 
-        for tile_coord in tile_coordinates:
-            # Extract the unique ID from self.tile_map and self.asset_map
-            unique_id = self.tile_map[tile_coord]
+        for x in range(tile_coordinates[0].start, tile_coordinates[0].stop):
+            for y in range(tile_coordinates[1].start, tile_coordinates[1].stop):
+                # Extract the unique ID from self.tile_map and self.asset_map
+                unique_id = self.tile_map[x, y]
 
-            # Check if the object with this unique ID is already loaded
-            if unique_id not in object_positions:
-                # Load the object if it's not loaded
-                if unique_id not in img_scale_type_dict:
-                    img_scale_type_dict[unique_id] = img_scale_type_dict[unique_id]['image']
+                # Check if the object with this unique ID is already loaded
+                if unique_id not in self.tile_positions:
+                    # Create a dictionary to store all relevant information
+                    object_info = {
+                        "image": None,  # The image object (initialize as None)
+                        "positions": [],  # List to store the positions where this object should be drawn
+                    }
+                    # Load the image if it's not loaded
+                    for entry in self.current_object.img_scale_type_dict.values():
+                        if entry['id'] == int(unique_id):
+                            object_info["image"] = pygame.transform.scale(pygame.image.load(entry["image"]),(self.new_tile_size ,self.new_tile_size))
+                    self.tile_positions[unique_id] = object_info
 
-                # Create a list to store the positions where this object should be drawn
-                object_positions[unique_id] = []
 
-            # Add the current tile's coordinates to the object's position list
-            object_positions[unique_id].append(tile_coord)
+                # Add the current tile's coordinates to the object's position list
+                self.tile_positions[unique_id]["positions"].append((x, y))
 
 
 
-        pass
+                #### ASSETS
+                unique_id = self.asset_map[x, y]
+                # Check if the object with this unique ID is already loaded
+                if unique_id not in self.asset_positions:
+                    # Create a dictionary to store all relevant information
+                    object_info_assets = {
+                        "image": None,  # The image object (initialize as None)
+                        "positions": [],  # List to store the positions where this object should be drawn
+                    }
+                    # Load the image if it's not loaded
+                    for entry in self.current_object.img_scale_type_dict.values():
+                        if entry['id'] == int(unique_id):
+                            object_info_assets["image"] = pygame.transform.scale(pygame.image.load(entry["image"]),(self.new_tile_size ,self.new_tile_size))
+
+                    self.asset_positions[unique_id] = object_info_assets
+                # Add the current tile's coordinates to the object's position list
+                self.asset_positions[unique_id]["positions"].append((x, y))
+
+
 
     def unload_objects_from_currently_drawn_map(self, tile_coordinates):
-        pass
+        tile_positions_copy = self.tile_positions.copy()
+        x_start, x_stop = tile_coordinates[0].start, tile_coordinates[0].stop
+        y_start, y_stop = tile_coordinates[1].start, tile_coordinates[1].stop
 
-    def update_loaded_objects_in_currently_drawn_map(self):
-        #check which tiles to add
-        #check which tiles to remove
-        self.load_tiles_to_currently_drawn_map()
-        self.unload_tiles_from_currently_drawn_map()
-        pass
+        for unique_id, positions in tile_positions_copy.items():
+            updated_positions = []
+
+            for x, y in positions["positions"]:
+                if not (x_start <= x < x_stop and y_start <= y < y_stop):
+                    # Position is not in tile_coordinates to be removed, keep it
+                    updated_positions.append((x, y))
+
+            # Update positions for this unique ID
+            self.tile_positions[unique_id] = updated_positions
+
+            # If the updated positions list is empty, unload the image
+            if not updated_positions:
+                # Unload the image associated with this unique ID
+                #pygame.image.unload(self.object_info[unique_id]["image"])
+                # Remove this entry from the tile_positions dictionary
+                del self.tile_positions[unique_id]
+
+        asset_positions_copy = self.asset_positions.copy()
+        for unique_id, positions in asset_positions_copy.items():
+            updated_positions = []
+
+            for x, y in positions["positions"]:
+                if not (x_start <= x < x_stop and y_start <= y < y_stop):
+                    # Position is not in tile_coordinates to be removed, keep it
+                    updated_positions.append((x, y))
+
+            # Update positions for this unique ID
+            self.asset_positions[unique_id] = updated_positions
+
+            # If the updated positions list is empty, unload the image
+            if not updated_positions:
+                # Unload the image associated with this unique ID
+               # pygame.image.unload(self.object_info[unique_id]["image"])
+                # Remove this entry from the tile_positions dictionary
+                del self.asset_positions[unique_id]
+
 
     def define_bounds_of_currently_drawn_map(self): # initalize the current grid (also used when zoom level is changed
-        self.new_tile_size = TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
-        self.amount_of_tiles_shown_on_screen_width = math.floor(WIDTH // self.new_tile_size)
+        self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.amount_of_tiles_shown_on_screen_width = math.floor(.7*WIDTH // self.new_tile_size)
         self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
 
+        print(self.amount_of_tiles_shown_on_screen_width)
         x, y, width, height = self.calculate_bounds()
         # Create xbounds and ybounds
         self.xbounds = slice(x, x + width)
@@ -494,17 +579,8 @@ class WorldMap:
             self.ybounds = slice(self.ybounds.start + xchange, self.ybounds.stop + xchange)
 
 
-
-
-
-
-
-
-
-
-
 class CurrentObjects:
-    def __init__(self, available_maps_, min_row_height_, amount_of_rows_):
+    def __init__(self, available_maps_, min_row_height_, amount_of_rows_,img_scale_type_dict_):
         self.selected_maps = self.initialize_selected_maps(available_maps_, min_row_height_, amount_of_rows_)
         self.currently_interatable_objects = self.selected_maps
         self.currently_drawn_objects = self.selected_maps
@@ -512,8 +588,10 @@ class CurrentObjects:
         self.background = PLACEHOLDER_BACKGROUND
         self.run = True
         self.editor_state = 1
-        self.location_of_screen_on_map_and_zoom_level = (3000, 3000, 5) #5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
-        self.OLD_location_of_screen_on_map_and_zoom_level = (3000, 3000, 5) #zoom of 5 means that the regular tile size is 5 times smaller than what it will be
+        self.location_of_screen_on_map_and_zoom_level = (3000, 3000, 1) #5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
+        self.OLD_location_of_screen_on_map_and_zoom_level = (3000, 3000, 1) #zoom of 5 means that the regular tile size is 5 times smaller than what it will be
+        self.TILE_SIZE_WORLD = 50
+        self.img_scale_type_dict =img_scale_type_dict_
 
 
     def add_to_drawn_objects_list(self, object_to_add, put_to_front=False):
@@ -553,6 +631,11 @@ class CurrentObjects:
         return selected_maps_
 
     def load_empty_map_to_current(self):
+        current_map = WorldMap(self,self.img_scale_type_dict)
+        current_map.create_empty_world_map()
+        current_map.define_bounds_of_currently_drawn_map()
+        self.currently_drawn_objects = [current_map]
+        self.currently_interatable_objects = []
         print('dddd')
 
 
@@ -591,7 +674,7 @@ HEIGHT = 900
 screen_info = pygame.display.Info()
 #WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
 
-TILE_SIZE_WORLD = 50
+
 TILE_SIZE_EDITOR = 100
 SCALES = (100, 100)
 fps = 60
@@ -615,8 +698,8 @@ MINIMAL_ROW_SIZE_IN_PIXELS = 157
 min_row_height = max(MINIMAL_ROW_SIZE_IN_PIXELS, main_rect.height // AMOUNT_OF_ROWS_TO_SHOW)
 amount_of_rows = math.floor(main_rect.height / min_row_height)
 
-main_current_object = CurrentObjects(available_maps, min_row_height, amount_of_rows)
-main_current_object.add_to_drawn_objects_list(MapSelectionOptions(min_row_height,amount_of_rows,main_rect),True,)
+main_current_object = CurrentObjects(available_maps, min_row_height, amount_of_rows,img_scale_type_dict)
+main_current_object.add_to_drawn_objects_list(MapSelectionOptions(min_row_height,amount_of_rows,main_rect),True)
 
 
 
