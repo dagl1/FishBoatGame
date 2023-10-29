@@ -181,7 +181,7 @@ def create_map_from_images(img_scale_type_dict_, screen_height, scale):  # takes
     # If a picture is bigger than 1,1 then multiple entries on the row,column array (using numpy/pandas arrays) should have the same unique idea. For instance a
     # tree of height 2, should take up 2 rows, and 1 column. Assume that no asset will be bigger than the total amount of available pictures per column
 
-    ARBITRARY_AMOUNT_EXTRA_COLS = 5  # for making sure it all fits on the screen
+    ARBITRARY_AMOUNT_EXTRA_COLS = 4  # for making sure it all fits on the screen
     PERCENTAGE_OF_SCREEN = 80
     # Calculate the total number of rows based on the screen height and scaling
     total_rows = int((screen_height * PERCENTAGE_OF_SCREEN / 100) / scale)
@@ -191,8 +191,21 @@ def create_map_from_images(img_scale_type_dict_, screen_height, scale):  # takes
     # Initialize the map as a 2D NumPy array filled with zeros
     map_array_ = np.zeros((total_rows, total_width), dtype=int)
     map_array_ = place_images_on_map(map_array_, img_scale_type_dict_)
-    print(map_array_)
     return map_array_
+
+def filter_array(array):
+    unique_values = set()
+    filtered_array = np.zeros(array.shape, dtype=int)
+
+    for row in range(array.shape[0]):
+        for col in range(array.shape[1]):
+            current_value = array[row, col]
+
+            if current_value != 0 and current_value not in unique_values:
+                unique_values.add(current_value)
+                filtered_array[row, col] = current_value
+
+    return filtered_array
 
 
 def set_state_of_editor(option):  # will determine if we are in map select, or editing mode, or menu loading
@@ -428,7 +441,7 @@ class WorldMap:
             else:
                 for x, y in positions["positions"]:
                     surface.blit(loaded_image, (self.new_tile_size *(x - x_start), self.new_tile_size *(y - y_start)))
-                    a = 5
+
 
 
     def load_objects_to_currently_drawn_map(self, tile_coordinates):
@@ -452,7 +465,8 @@ class WorldMap:
                     # Load the image if it's not loaded
                     for entry in self.current_object.img_scale_type_dict.values():
                         if entry['id'] == int(unique_id):
-                            object_info["image"] = pygame.transform.scale(pygame.image.load(entry["image"]),(self.new_tile_size ,self.new_tile_size))
+                            object_info["image"] = pygame.transform.scale(pygame.image.load(entry["image"]), (self.new_tile_size * entry["x_scale"],
+                                                                                                             self.new_tile_size * entry ["y_scale"]))
                     self.tile_positions[unique_id] = object_info
 
 
@@ -473,7 +487,7 @@ class WorldMap:
                     # Load the image if it's not loaded
                     for entry in self.current_object.img_scale_type_dict.values():
                         if entry['id'] == int(unique_id):
-                            object_info_assets["image"] = pygame.transform.scale(pygame.image.load(entry["image"]),(self.new_tile_size ,self.new_tile_size))
+                            object_info_assets["image"] = pygame.transform.scale(pygame.image.load(entry["image"]), (self.new_tile_size * entry["x_scale"], self.new_tile_size * entry ["y_scale"]))
 
                     self.asset_positions[unique_id] = object_info_assets
                 # Add the current tile's coordinates to the object's position list
@@ -526,10 +540,9 @@ class WorldMap:
 
     def define_bounds_of_currently_drawn_map(self): # initalize the current grid (also used when zoom level is changed
         self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
-        self.amount_of_tiles_shown_on_screen_width = math.floor(.7*WIDTH // self.new_tile_size)
+        self.amount_of_tiles_shown_on_screen_width = math.floor(MAP_EDITOR_PANE_RATIO*WIDTH // self.new_tile_size)
         self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
 
-        print(self.amount_of_tiles_shown_on_screen_width)
         x, y, width, height = self.calculate_bounds()
         # Create xbounds and ybounds
         self.xbounds = slice(x, x + width)
@@ -579,8 +592,77 @@ class WorldMap:
             self.ybounds = slice(self.ybounds.start + xchange, self.ybounds.stop + xchange)
 
 
+class EditorPane:
+
+    def __init__(self, current_object_,img_scale_type_dict_, TILE_SIZE_EDITOR_, map_array_):
+        self.current_object = current_object_
+        self.img_scale_type_dic = img_scale_type_dict_
+        self.currently_loaded_images = {}
+        self.TILE_SIZE_EDITOR = TILE_SIZE_EDITOR_
+        self.current_page = 0
+        self.amount_of_columns_on_page = math.floor((WIDTH * (1 - MAP_EDITOR_PANE_RATIO)) / self.TILE_SIZE_EDITOR)
+        self.map_array = map_array_
+        self.amount_of_pages = math.ceil( len(map_array_[0]/self.amount_of_columns_on_page) )
+        self.x_start = WIDTH * MAP_EDITOR_PANE_RATIO
+        self.y_start = 0
+
+    def draw(self, surface):
+        for unique_id, positions in self.currently_loaded_images.items():
+            loaded_image = positions["image"]
+            print(positions["positions"][0])
+            print(loaded_image)
+            surface.blit(loaded_image, (self.TILE_SIZE_EDITOR * (positions["positions"][0][0] + self.x_start), self.TILE_SIZE_EDITOR * (positions["positions"][0][1] + self.y_start)))
+
+
+
+
+
+    def handle_event(self):
+        pass
+
+    def load_map_array_images_for_drawing(self):
+        for x in range(len(self.map_array)):
+            x = x + self.amount_of_columns_on_page * self.current_page
+            if x < len(self.map_array) and x < self.amount_of_columns_on_page * (self.current_page + 1) + 1:
+                for y in range(len(self.map_array[x])):
+                    unique_id = self.map_array[x][y]
+                    if unique_id not in self.currently_loaded_images:
+                        object_info = {
+                            "image": None,  # The image object (initialize as None)
+                            "positions": [],  # List to store the positions where this object should be drawn
+                            "scales": (1, 1)
+                        }
+                        for entry in self.current_object.img_scale_type_dict.values():
+                            if entry['id'] == int(unique_id):
+                                object_info["image"] = pygame.transform.scale(pygame.image.load(entry["image"]), (self.TILE_SIZE_EDITOR * entry["x_scale"], self.TILE_SIZE_EDITOR * entry["y_scale"]))
+                                object_info["scales"] = (entry["x_scale"], entry["x_scale"])
+                        self.currently_loaded_images[unique_id] = object_info
+                        self.currently_loaded_images[unique_id]["positions"].append((x-self.amount_of_columns_on_page * self.current_page, y))
+    def unload_map_array_images_for_drawing(self):
+        self.currently_loaded_images = {}
+
+    def go_to_next_page(self):
+        self.current_page += 1
+        self.unload_map_array_images_for_drawing()
+        self.load_map_array_images_for_drawing()
+
+
+    def go_to_previous_page(self):
+        self.current_page -= 1
+        self.unload_map_array_images_for_drawing()
+        self.load_map_array_images_for_drawing()
+
+    def define_editor_pane_(self):
+
+        pass
+
+
+
+
+
+
 class CurrentObjects:
-    def __init__(self, available_maps_, min_row_height_, amount_of_rows_,img_scale_type_dict_):
+    def __init__(self, available_maps_, min_row_height_, amount_of_rows_,img_scale_type_dict_, map_array_):
         self.selected_maps = self.initialize_selected_maps(available_maps_, min_row_height_, amount_of_rows_)
         self.currently_interatable_objects = self.selected_maps
         self.currently_drawn_objects = self.selected_maps
@@ -591,7 +673,9 @@ class CurrentObjects:
         self.location_of_screen_on_map_and_zoom_level = (3000, 3000, 1) #5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
         self.OLD_location_of_screen_on_map_and_zoom_level = (3000, 3000, 1) #zoom of 5 means that the regular tile size is 5 times smaller than what it will be
         self.TILE_SIZE_WORLD = 50
-        self.img_scale_type_dict =img_scale_type_dict_
+        self.img_scale_type_dict = img_scale_type_dict_
+        self.TILE_SIZE_EDITOR = 100
+        self.map_array = map_array_
 
 
     def add_to_drawn_objects_list(self, object_to_add, put_to_front=False):
@@ -635,8 +719,11 @@ class CurrentObjects:
         current_map.create_empty_world_map()
         current_map.define_bounds_of_currently_drawn_map()
         self.currently_drawn_objects = [current_map]
+        editing_pane = EditorPane(self,self.img_scale_type_dict,self.TILE_SIZE_EDITOR, self.map_array)
+        editing_pane.load_map_array_images_for_drawing()
+        self.currently_drawn_objects.append(editing_pane)
         self.currently_interatable_objects = []
-        print('dddd')
+
 
 
 # ### TEST CODE create_map_from_images
@@ -673,7 +760,7 @@ WIDTH = 1800
 HEIGHT = 900
 screen_info = pygame.display.Info()
 #WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
-
+MAP_EDITOR_PANE_RATIO = .7
 
 TILE_SIZE_EDITOR = 100
 SCALES = (100, 100)
@@ -687,7 +774,13 @@ available_maps_location = os.path.join(parent_directory, 'Assets/Maps/World_Maps
 
 img_scale_type_dict = check_and_load_image_dict(world_map_img_location)
 map_array = create_map_from_images(img_scale_type_dict, HEIGHT, TILE_SIZE_EDITOR)
+filtered_map_array = filter_array(map_array)
 available_maps = check_available_world_maps(available_maps_location)
+print(filtered_map_array)
+print(len(filtered_map_array[0]))
+print(len(filtered_map_array))
+
+
 
 PLACEHOLDER_BACKGROUND = pygame.transform.scale(pygame.image.load(os.path.join(parent_directory, 'Assets/Images/Backgrounds/PLACEHOLDER_STOCK_WATER.png')),
                                                 (WIDTH, HEIGHT))
@@ -698,7 +791,7 @@ MINIMAL_ROW_SIZE_IN_PIXELS = 157
 min_row_height = max(MINIMAL_ROW_SIZE_IN_PIXELS, main_rect.height // AMOUNT_OF_ROWS_TO_SHOW)
 amount_of_rows = math.floor(main_rect.height / min_row_height)
 
-main_current_object = CurrentObjects(available_maps, min_row_height, amount_of_rows,img_scale_type_dict)
+main_current_object = CurrentObjects(available_maps, min_row_height, amount_of_rows,img_scale_type_dict,filtered_map_array)
 main_current_object.add_to_drawn_objects_list(MapSelectionOptions(min_row_height,amount_of_rows,main_rect),True)
 
 
