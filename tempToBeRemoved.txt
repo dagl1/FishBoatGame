@@ -1,0 +1,286 @@
+class WorldMap:
+
+    def __init__(self, current_object, image_dict):
+        self.size = None
+        self.name = None
+        self.last_edited = None
+        self.time_created = None
+        self.tile_map = None
+        self.asset_map = None
+        self.current_object = current_object
+        self.image_dict = image_dict
+        self.grid_portion_on_screen = np.zeros((1, 1))
+        self.xbounds = slice(1, 2)
+        self.ybounds = slice(1, 2)
+        self.tile_positions = {}
+        self.asset_positions = {}
+        self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.amount_of_tiles_shown_on_screen_width = math.floor(WIDTH // self.new_tile_size)
+        self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
+
+    def handle_events(self, event_):
+        x_start = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y_start = self.current_object.location_of_screen_on_map_and_zoom_level[1]
+        # self.new_tile_size * (x - x_start),
+        #print(pygame.mouse.get_pressed()[0])
+        #if event_.type == pygame.MOUSEBUTTONDOWN and event_.button == 1:
+        if pygame.mouse.get_pressed()[0] == True:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
+                map_x = (mouse_x + x_start) // self.new_tile_size
+                map_y = (mouse_y + y_start) // self.new_tile_size
+
+                if self.current_object.selected_editor_asset_or_tile[1] != "deleted":
+                    if self.current_object.selected_editor_asset_or_tile[1] == "tile":
+                        self.tile_map[map_x, map_y] = self.current_object.selected_editor_asset_or_tile[0]
+                    elif self.current_object.selected_editor_asset_or_tile[1] == "asset":
+                        self.asset_map[map_x, map_y] = self.current_object.selected_editor_asset_or_tile[0]
+
+                    self.unload_objects_from_currently_drawn_map((slice(map_x, map_x + 1), slice(map_y, map_y + 1)), self.current_object.selected_editor_asset_or_tile[1] )
+                    self.load_objects_to_currently_drawn_map((slice(map_x, map_x + 1), slice(map_y, map_y + 1)))
+
+        elif event_.type == pygame.KEYDOWN:
+            map_move_distance_size = 20*self.current_object.location_of_screen_on_map_and_zoom_level[2]
+            if event_.key == pygame.K_LEFT:
+                self.update_map_bounds( -map_move_distance_size, 0)
+
+            elif event_.key == pygame.K_RIGHT:
+                self.update_map_bounds(+map_move_distance_size, 0)
+
+            elif event_.key == pygame.K_UP:
+                self.update_map_bounds(0, -map_move_distance_size)
+
+            elif event_.key == pygame.K_DOWN:
+                self.update_map_bounds(0, +map_move_distance_size)
+
+
+
+    def create_empty_world_map(self, name="New Map", size=(10240, 10240)):
+        self.size = (size[0]//self.current_object.TILE_SIZE_WORLD, self[1]//self.current_object.TILE_SIZE_WORLD)
+        self.name = name
+        self.last_edited = datetime.now().strftime("%d/%m/%Y %H:%M:%S")  # placeholder
+        self.time_created = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.tile_map = np.ones(self.size)
+        self.asset_map = np.zeros(self.size)
+
+    def load_world_map_from_json(self, location_):
+        pass
+        ## This function requires some changes to how things are shown/saved, which requires modification of how the availalbe maps are loaded
+        # In particular, the buttons, and therefore the maps,  need to have both the name and the path of the map separately accesible
+        # location_ = location_ + self.name  + ".json"
+        # with open(location_, 'r') as json_file:
+        #     data = json.load(json_file)
+        #     self.size = tuple(data['size'])
+        #     self.name = data['name']
+        #     self.last_edited = data['last_edited']
+        #     self.time_created = data['time_created']
+        #     self.tile_map = np.array(data['tile_map'])
+        #     self.asset_map = np.array(data['asset_map'])
+
+    def save_world_map_to_json(self, location_):
+        location_ = location_ + self.name + ".json"
+        data = {
+            'size': list(self.size),
+            'name': self.name,
+            'last_edited': self.last_edited,
+            'time_created': self.time_created,
+            'tile_map': self.tile_map.tolist(),
+            'asset_map': self.asset_map.tolist()
+        }
+
+        with open(location_, 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+
+    def draw(self, surface):
+
+        x_start = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y_start = self.current_object.location_of_screen_on_map_and_zoom_level[1]
+        # zoom_level = self.current_object.location_of_screen_on_map_and_zoom_level[2]
+
+        placeholder_rect = pygame.Surface((self.new_tile_size, self.new_tile_size))
+        placeholder_rect.fill((255, 0, 255))
+
+        for unique_id, positions in self.tile_positions.items():
+            loaded_image = positions["image"]
+            if loaded_image == None:
+                loaded_image = placeholder_rect
+            # positions["positions"] print(len(positions["positions"]))
+            for x, y in positions["positions"]:
+                if (self.new_tile_size *(x+1)) - x_start  < MAP_EDITOR_PANE_RATIO*WIDTH:
+                    surface.blit(loaded_image, ((self.new_tile_size *x) - x_start, (self.new_tile_size *y) - y_start))
+
+        for unique_id, positions in self.asset_positions.items():
+            loaded_image = positions["image"]
+            if loaded_image == None:
+                loaded_image = placeholder_rect  ## Need to add empty asset placeholder
+            else:
+                for x, y in positions["positions"]:
+                    surface.blit(loaded_image, ((self.new_tile_size *x) - x_start, (self.new_tile_size *y) - y_start))
+
+    def load_objects_to_currently_drawn_map(self, tile_coordinates):
+
+
+        for items in  self.image_dict.values():
+            self.items["loaded_image"] = pygame.load_image(items["image"])
+        
+        
+        
+        
+        
+
+        # Check the IDs given in each location in the tile_coordinates on both the  self.tile_map and  self.asset_map, find all the unique ids, check which ones
+        # which ones are already present in currently_loaded_objects, and only load the ones that aren't there yet. create for each unique id (corresponding to
+        # an object we are going to draw later, also the positions where they should be drawn, this should be updated also for non-unique ids that were already loaded
+        for x in range(tile_coordinates[0].start, tile_coordinates[0].stop):
+            for y in range(tile_coordinates[1].start, tile_coordinates[1].stop):
+                # Extract the unique ID from self.tile_map and self.asset_map
+                unique_id = self.tile_map[x, y]
+
+                # Check if the object with this unique ID is already loaded
+                if unique_id not in self.tile_positions:
+                    # # Create a dictionary to store all relevant information
+                    object_info = {
+                        "image": None,  # The image object (initialize as None)
+                        "positions": [],  # List to store the positions where this object should be drawn
+                    }
+                    # # Load the image if it's not loaded
+                    for entry in self.current_object.img_scale_type_dict.values():
+                        if entry['id'] == int(unique_id):
+                            object_info["image"] = pygame.transform.scale(pygame.image.load(entry["image"]), (self.new_tile_size * entry["x_scale"],
+                                                                                                              self.new_tile_size * entry["y_scale"]))
+                    self.tile_positions[unique_id] = object_info
+
+                # Add the current tile's coordinates to the object's position list
+                # self.tile_positions[unique_id]["positions"].append((x, y))
+                # self.tile_positions[unique_id]["positions"] = list(set(self.tile_positions[unique_id]["positions"]))
+
+                #### ASSETS
+                unique_id = self.asset_map[x, y]
+                # Check if the object with this unique ID is already loaded
+                if unique_id not in self.asset_positions:
+                    # Create a dictionary to store all relevant information
+                    object_info_assets = {
+                        "image": None,  # The image object (initialize as None)
+                        "positions": [],  # List to store the positions where this object should be drawn
+                    }
+                    # Load the image if it's not loaded
+                    for entry in self.current_object.img_scale_type_dict.values():
+                        if entry['id'] == int(unique_id):
+                            object_info_assets["image"] = pygame.transform.scale(pygame.image.load(entry["image"]),
+                                                                                 (self.new_tile_size * entry["x_scale"], self.new_tile_size * entry["y_scale"]))
+
+                    self.asset_positions[unique_id] = object_info_assets
+                # Add the current tile's coordinates to the object's position list
+                self.asset_positions[unique_id]["positions"].append((x, y))
+                self.asset_positions[unique_id]["positions"] = list(set(self.asset_positions[unique_id]["positions"]))
+
+    def unload_objects_from_currently_drawn_map(self, tile_coordinates, tile_or_asset="both"):
+        tile_positions_copy = self.tile_positions.copy()
+        x_start, x_stop = tile_coordinates[0].start, tile_coordinates[0].stop
+        y_start, y_stop = tile_coordinates[1].start, tile_coordinates[1].stop
+        if tile_or_asset == "both" or tile_or_asset == "tile":
+            tile_positions_copy = self.tile_positions.copy()
+            for unique_id, positions in tile_positions_copy.items():
+                updated_positions = []
+
+                for x, y in positions["positions"]:
+                    if not (x_start <= x < x_stop and y_start <= y < y_stop):
+                        # Position is not in tile_coordinates to be removed, keep it
+                        updated_positions.append((x, y))
+
+                # Update positions for this unique ID
+                self.tile_positions[unique_id]["positions"] = updated_positions
+
+                # If the updated positions list is empty, unload the image
+                if not updated_positions:
+
+                    # Unload the image associated with this unique ID
+                    # Remove this entry from the tile_positions dictionary
+                    del self.tile_positions[unique_id]
+
+        if tile_or_asset == "both" or tile_or_asset == "asset":
+            asset_positions_copy = self.asset_positions.copy()
+            for unique_id, positions in asset_positions_copy.items():
+                updated_positions = []
+
+                for x, y in positions["positions"]:
+                    if not (x_start <= x < x_stop and y_start <= y < y_stop):
+                        # Position is not in tile_coordinates to be removed, keep it
+                        updated_positions.append((x, y))
+
+                # Update positions for this unique ID
+                self.asset_positions[unique_id]["positions"] = updated_positions
+
+                # If the updated positions list is empty, unload the image
+                if not updated_positions:
+                    # Unload the image associated with this unique ID
+                    # pygame.image.unload(self.object_info[unique_id]["image"])
+                    # Remove this entry from the tile_positions dictionary
+                    del self.asset_positions[unique_id]
+
+
+    def define_bounds_of_currently_drawn_map(self):  # initalize the current grid (also used when zoom level is changed
+        self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
+        self.amount_of_tiles_shown_on_screen_width = math.floor(MAP_EDITOR_PANE_RATIO * WIDTH // self.new_tile_size)
+        self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
+
+        x, y, width, height = self.calculate_bounds()
+        # Create xbounds and ybounds
+        self.xbounds = slice(x//self.new_tile_size, (x//self.new_tile_size + width ))
+        self.ybounds = slice(y//self.new_tile_size, (y//self.new_tile_size + height))
+
+
+        self.load_objects_to_currently_drawn_map((self.xbounds, self.ybounds))  ## Initialize the tiles/objects
+
+    def calculate_bounds(self):
+        x = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y = self.current_object.location_of_screen_on_map_and_zoom_level[1]
+        width = self.amount_of_tiles_shown_on_screen_width
+        height = self.amount_of_tiles_shown_on_screen_height
+
+        return x, y, width, height
+
+    def update_map_bounds(self, xchange = 0, ychange=0):
+        xchange = xchange #* self.new_tile_size
+        ychange = ychange #* self.new_tile_size
+       # xchange = self.current_object.location_of_screen_on_map_and_zoom_level[0] - self.current_object.OLD_location_of_screen_on_map_and_zoom_level[0]
+       # ychange = self.current_object.location_of_screen_on_map_and_zoom_level[1] - self.current_object.OLD_location_of_screen_on_map_and_zoom_level[1]
+
+        print(self.xbounds.stop, xchange)
+        # if xchange != 0:
+        #     if xchange > 0:
+        #         new_colums_x = slice(self.xbounds.stop, xchange + self.xbounds.stop + 1)
+        #         print(new_colums_x)
+        #         to_remove_columns_x = slice(self.xbounds.start-xchange-1, self.xbounds.start)
+        #     elif xchange < 0:
+        #         new_colums_x = slice(self.xbounds.start + xchange, self.xbounds.start + xchange + 1)
+        #         to_remove_columns_x = slice(self.xbounds.stop + xchange, self.xbounds.stop + xchange + 1)
+        #     new_columns = (new_colums_x, self.ybounds)
+        #     to_remove_columns = (to_remove_columns_x, self.ybounds)
+
+            #self.load_objects_to_currently_drawn_map(new_columns)
+            #self.unload_objects_from_currently_drawn_map(to_remove_columns)
+        self.xbounds = slice(self.xbounds.start + xchange, self.xbounds.stop + xchange)
+
+
+        #
+        # if ychange != 0:
+        #     if ychange > 0:
+        #         new_rows_y = slice(self.ybounds.start, self.ybounds.stop + ychange)
+        #         to_remove_rows_y = slice(self.ybounds.start, self.ybounds.start + ychange)
+        #     elif ychange < 0:
+        #         new_rows_y = slice(self.ybounds.start + ychange, self.ybounds.stop)
+        #         to_remove_rows_y = slice(self.ybounds.stop + ychange, self.ybounds.stop)
+        #     new_rows = (self.xbounds, new_rows_y)
+        #     to_remove_rows = (self.xbounds, to_remove_rows_y)
+
+            #self.load_objects_to_currently_drawn_map(new_rows)
+            #self.unload_objects_from_currently_drawn_map(to_remove_rows)
+        self.ybounds = slice(self.ybounds.start + ychange, self.ybounds.stop + ychange)
+
+
+        #self.unload_objects_from_currently_drawn_map((self.xbounds, self.ybounds))
+        self.load_objects_to_currently_drawn_map((self.xbounds, self.ybounds))
+        self.current_object.location_of_screen_on_map_and_zoom_level = ( self.current_object.location_of_screen_on_map_and_zoom_level[0]+xchange,
+                                                                         self.current_object.location_of_screen_on_map_and_zoom_level[1]+ychange,
+                                                                         self.current_object.location_of_screen_on_map_and_zoom_level[2] )
