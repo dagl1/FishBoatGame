@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 
 
-def create_dictionary_from_image_name(world_map_img_location_file,
+def create_dictionary_from_image_name(Fish_Maps_img_location_file,
                                       image_name):  # this dict will include a picture and a tuple, tuple will contain image, x, y scaling, and the type defind by
     # the image name
     # Split the image name based on underscores
@@ -22,7 +22,7 @@ def create_dictionary_from_image_name(world_map_img_location_file,
     x, y = int(x), int(y)
 
     # Load the image using Pygame
-    image = (os.path.join(world_map_img_location_file, image_name[0] + image_name[1]))
+    image = (os.path.join(Fish_Maps_img_location_file, image_name[0] + image_name[1]))
 
     # Create a dictionary with the extracted information
     image_info = {
@@ -35,17 +35,17 @@ def create_dictionary_from_image_name(world_map_img_location_file,
     return image_info
 
 
-def create_dict_of_dicts_from_load_images(world_map_img_location_):
+def create_dict_of_dicts_from_load_images(Fish_Maps_img_location_):
     # Initialize an empty dictionary and a counter for unique IDs
     img_scale_type_dict_ = {}
     unique_id = 1
     # Iterate through all files in the specified directory and its subfolders
-    for root, dirs, files in os.walk(world_map_img_location_):
+    for root, dirs, files in os.walk(Fish_Maps_img_location_):
         for file in files:
             if file.endswith(".png"):
-                world_map_img_location_file = os.path.dirname(os.path.join(root, file))
+                Fish_Maps_img_location_file = os.path.dirname(os.path.join(root, file))
                 image_name = os.path.splitext(file)  # Remove the file extension
-                img_info = create_dictionary_from_image_name(world_map_img_location_file, image_name)
+                img_info = create_dictionary_from_image_name(Fish_Maps_img_location_file, image_name)
 
                 # Add the unique ID to the dictionary entry
                 img_info["id"] = unique_id
@@ -74,14 +74,14 @@ def load_image_dict_from_json(filename):
     return None
 
 
-def add_new_images_to_dict(world_map_img_location_, image_dict):
+def add_new_images_to_dict(Fish_Maps_img_location_, image_dict):
     unique_id = int(max(image_dict.keys()) if image_dict else 0)  # Find the highest unique ID)
-    for root, dirs, files in os.walk(world_map_img_location_):
+    for root, dirs, files in os.walk(Fish_Maps_img_location_):
         for file in files:
             if file.endswith(".png") or file.endswith(".PNG"):
-                world_map_img_location_file = os.path.dirname(os.path.join(root, file))
+                Fish_Maps_img_location_file = os.path.dirname(os.path.join(root, file))
                 image_name = os.path.splitext(file)  # Remove the file extension
-                img_info = create_dictionary_from_image_name(world_map_img_location_file, image_name)
+                img_info = create_dictionary_from_image_name(Fish_Maps_img_location_file, image_name)
                 # Check if the image is not in the dictionary, and add it with a new ID
                 if not any(
                         img_info["type"] == v["type"] and img_info["x_scale"] == v["x_scale"] and img_info["y_scale"] == v["y_scale"] and img_info["image"] ==
@@ -92,7 +92,7 @@ def add_new_images_to_dict(world_map_img_location_, image_dict):
     return image_dict
 
 
-def mark_deleted_images(world_map_img_location_, image_dict):
+def mark_deleted_images(Fish_Maps_img_location_, image_dict):
     for img_id, img_info in image_dict.items():
         image_path = img_info['image']
         # Check if the image file does not exist
@@ -102,24 +102,24 @@ def mark_deleted_images(world_map_img_location_, image_dict):
     return image_dict
 
 
-def update_dict_to_be_congruent_with_files(world_map_img_location_, image_info):
-    image_info = add_new_images_to_dict(world_map_img_location_, image_info)
-    image_info = mark_deleted_images(world_map_img_location_, image_info)
+def update_dict_to_be_congruent_with_files(Fish_Maps_img_location_, image_info):
+    image_info = add_new_images_to_dict(Fish_Maps_img_location_, image_info)
+    image_info = mark_deleted_images(Fish_Maps_img_location_, image_info)
     return image_info
 
 
 # Function to check if a dictionary exists, and load it if it does; otherwise, create one
-def check_and_load_image_dict(world_map_img_location_):
-    filename = 'Dicts/main_image_world_map_dict.json'
+def check_and_load_image_dict(Fish_Maps_img_location_):
+    filename = 'Dicts/main_image_Fish_Maps_dict.json'
     image_info = load_image_dict_from_json(filename)
 
     if image_info is not None:
         print("Image dictionary loaded.")
     else:
         print("Image dictionary does not exist. Creating a new one.")
-        image_info = create_dict_of_dicts_from_load_images(world_map_img_location_)  # Call your function to create the dictionary
+        image_info = create_dict_of_dicts_from_load_images(Fish_Maps_img_location_)  # Call your function to create the dictionary
 
-    update_dict_to_be_congruent_with_files(world_map_img_location_, image_info)
+    update_dict_to_be_congruent_with_files(Fish_Maps_img_location_, image_info)
     save_image_dict_as_json(image_info, filename)
 
     return image_info
@@ -208,17 +208,17 @@ def filter_array(array):
 
 def set_state_of_editor(option):  # will determine if we are in map select, or editing mode, or menu loading
     editor_state_ = 1
-    if option == 'world_map_selector':
+    if option == 'Fish_Maps_selector':
         editor_state_ = 1
-    elif option == 'world_map_editing_mode':
+    elif option == 'Fish_Maps_editing_mode':
         editor_state_ = 2
-    elif option == 'world_map_menu_screen':
+    elif option == 'Fish_Maps_menu_screen':
         editor_state_ = 3
 
     return editor_state_
 
 
-def check_available_world_maps(available_maps_location_):
+def check_available_Fish_Maps(available_maps_location_):
     available_maps_ = []
 
     if os.path.exists(available_maps_location_) and os.path.isdir(available_maps_location_):
@@ -367,7 +367,7 @@ class MapSelectionOptions:
 
 
 
-class WorldMap:
+class FishMaps:
 
     def __init__(self, current_object, image_dict):
         self.size = None
@@ -389,10 +389,39 @@ class WorldMap:
         self.load_objects_to_currently_drawn_map()
 
     def handle_events(self, event_):
-        if event_.type == pygame.KEYDOWN:
+        x_start = self.current_object.location_of_screen_on_map_and_zoom_level[0]
+        y_start = self.current_object.location_of_screen_on_map_and_zoom_level[1]
 
+        if pygame.mouse.get_pressed()[0] == True:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
+                map_x = (mouse_x + x_start) // self.new_tile_size
+                map_y = (mouse_y + y_start) // self.new_tile_size
+                if self.current_object.selected_editor_asset_or_tile[1] != "deleted":
+                    if self.current_object.selected_editor_asset_or_tile[1] == "tile":
+                        self.tile_map[map_x, map_y] = self.current_object.selected_editor_asset_or_tile[0]
+                    elif self.current_object.selected_editor_asset_or_tile[1] == "asset":
+                        self.asset_map[map_x, map_y] = self.current_object.selected_editor_asset_or_tile[0]
+
+        ### Code for deleting assets by right click mouse
+        elif pygame.mouse.get_pressed()[2] == True:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
+                map_x = (mouse_x + x_start) // self.new_tile_size
+                map_y = (mouse_y + y_start) // self.new_tile_size
+                self.tile_map[map_x, map_y] = 0
+
+        ### Code for deleting assets by middle mouse
+        elif pygame.mouse.get_pressed()[1] == True:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
+                map_x = (mouse_x + x_start) // self.new_tile_size
+                map_y = (mouse_y + y_start) // self.new_tile_size
+                self.asset_map[map_x, map_y] = 0
+
+        elif event_.type == pygame.KEYDOWN:
             if event_.key == pygame.K_s:
-                self.save_world_map_to_json()
+                self.save_Fish_Maps_to_json()
 
             elif event_.key == pygame.K_1:
                 self.change_zoom_bounds(-1)
@@ -400,18 +429,9 @@ class WorldMap:
             elif event_.key == pygame.K_3:
                 self.change_zoom_bounds(+1)
 
-            # elif event_.key == pygame.K_KP1:
-            #     self.change_zoom_bounds(+1)
-            #
-            # elif event_.key == pygame.K_KP2:
-            #     self.change_zoom_bounds(+1)
-            #
-            # elif event_.key == pygame.K_KP3:
-            #     self.change_zoom_bounds(+1)
 
 
-
-    def create_empty_world_map(self, name="New Map", size=(10240, 10240)):
+    def create_empty_Fish_Maps(self, name="New Map", size=(102400, 102400)):
         self.size = (size[0]//self.current_object.TILE_SIZE_WORLD, size[1]//self.current_object.TILE_SIZE_WORLD)
         self.name = name
         self.last_edited = datetime.now().strftime("%d/%m/%Y %H:%M:%S")  # placeholderdefine_bounds_of_currently_drawn_map(
@@ -419,7 +439,7 @@ class WorldMap:
         self.tile_map = np.ones(self.size).astype(int)
         self.asset_map = np.zeros(self.size).astype(int)
 
-    def load_world_map_from_json(self, location_ ):
+    def load_Fish_Maps_from_json(self, location_ ):
 
         # This function requires some changes to how things are shown/saved, which requires modification of how the availalbe maps are loaded
         #In particular, the buttons, and therefore the maps,  need to have both the name and the path of the map separately accesible
@@ -433,7 +453,7 @@ class WorldMap:
             self.tile_map = np.array(data['tile_map'])
             self.asset_map = np.array(data['asset_map'])
 
-    def save_world_map_to_json(self):
+    def save_Fish_Maps_to_json(self):
         self.last_edited = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         location_ = available_maps_location + self.name + ".json"
         data = {
@@ -448,17 +468,6 @@ class WorldMap:
         with open(location_, 'w') as json_file:
             json.dump(data, json_file, indent=4)
 
-    def check_slice_overlap(self):
-        map_shape = self.tile_map.shape
-
-        x_start, x_stop = self.xbounds.start, self.xbounds.stop
-        y_start, y_stop = self.ybounds.start,  self.ybounds.stop
-
-        x_valid = x_start >= 0 and x_stop <= map_shape[0]
-        y_valid = y_start >= 0 and y_stop <= map_shape[1]
-
-        return x_valid and y_valid
-
     def draw(self, surface):
 
         x_start = self.current_object.location_of_screen_on_map_and_zoom_level[0]
@@ -467,32 +476,15 @@ class WorldMap:
         placeholder_rect = pygame.Surface((self.new_tile_size, self.new_tile_size))
         placeholder_rect.fill((255, 0, 255))
 
-        if self.check_slice_overlap():
-            for x in range(self.xbounds.start,self.xbounds.stop-2):
-                for y in range(self.ybounds.start,self.ybounds.stop):
-                    if self.tile_map[x][y] in self.image_dict:
-                        surface.blit(self.image_dict[self.tile_map[x][y]]["loaded_image"], ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
+        for x in range(self.xbounds.start,self.xbounds.stop-2):
+            for y in range(self.ybounds.start,self.ybounds.stop):
+                if self.tile_map[x][y] in self.image_dict:
+                    surface.blit(self.image_dict[self.tile_map[x][y]]["loaded_image"], ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
 
-            for x in range(self.xbounds.start, self.xbounds.stop-2):
-                for y in range(self.ybounds.start, self.ybounds.stop):
-                    if self.asset_map[x][y] in self.image_dict:
-                        surface.blit(self.image_dict[self.asset_map[x][y]]["loaded_image"], ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
-        else:
-            map_shape = self.tile_map.shape
-            for x in range(self.xbounds.start, self.xbounds.stop - 2):
-                for y in range(self.ybounds.start, self.ybounds.stop):
-                    if x >= 0 and y>= 0 and x <= map_shape[0] and y <= map_shape[1]:
-                        if self.tile_map[x][y] in self.image_dict:
-                            surface.blit(self.image_dict[self.tile_map[x][y]]["loaded_image"],
-                                         ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
-
-            for x in range(self.xbounds.start, self.xbounds.stop - 2):
-                for y in range(self.ybounds.start, self.ybounds.stop):
-                    if x >= 0 and y >= 0 and x <= map_shape[0] and y <= map_shape[1]:
-                        if self.asset_map[x][y] in self.image_dict:
-                            surface.blit(self.image_dict[self.asset_map[x][y]]["loaded_image"],
-                                         ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
-
+        for x in range(self.xbounds.start, self.xbounds.stop-2):
+            for y in range(self.ybounds.start, self.ybounds.stop):
+                if self.asset_map[x][y] in self.image_dict:
+                    surface.blit(self.image_dict[self.asset_map[x][y]]["loaded_image"], ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
 
     def load_objects_to_currently_drawn_map(self):
         for item in  self.image_dict.values():
@@ -514,12 +506,9 @@ class WorldMap:
         self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
 
         x, y, width, height = self.calculate_bounds()
-
         # Create xbounds and ybounds
         self.xbounds = slice( (x//self.new_tile_size) - 2, (x//self.new_tile_size + width )+2 )
         self.ybounds = slice( (y//self.new_tile_size) - 2, (y//self.new_tile_size + height)+2 )
-
-
 
     def calculate_bounds(self):
         x = self.current_object.location_of_screen_on_map_and_zoom_level[0]
@@ -529,7 +518,7 @@ class WorldMap:
 
         return x, y, width, height
 
-    def update_map_bounds(self, xchange=0, ychange=0):
+    def update_map_bounds(self, xchange = 0, ychange=0):
 
         temp_x = self.current_object.location_of_screen_on_map_and_zoom_level[0] + xchange
         temp_y = self.current_object.location_of_screen_on_map_and_zoom_level[1] + ychange
@@ -542,35 +531,24 @@ class WorldMap:
                              (self.current_object.location_of_screen_on_map_and_zoom_level[1]  // self.new_tile_size +  self.amount_of_tiles_shown_on_screen_height) + 2 )
 
 
-
-
     def change_zoom_bounds(self, zoom_change ):
 
         temp_x = self.current_object.location_of_screen_on_map_and_zoom_level[0]
-
         temp_y = self.current_object.location_of_screen_on_map_and_zoom_level[1]
         temp_zoom = self.current_object.location_of_screen_on_map_and_zoom_level[2] + zoom_change
         if temp_zoom < 1:
             temp_zoom = 1
 
         self.current_object.location_of_screen_on_map_and_zoom_level = (temp_x, temp_y, temp_zoom)
-        #print(self.new_tile_size)
-        old_size = self.new_tile_size
+
         self.new_tile_size = self.current_object.TILE_SIZE_WORLD // self.current_object.location_of_screen_on_map_and_zoom_level[2]
         self.amount_of_tiles_shown_on_screen_width = math.floor(MAP_EDITOR_PANE_RATIO * WIDTH // self.new_tile_size)
         self.amount_of_tiles_shown_on_screen_height = math.floor(HEIGHT // self.new_tile_size)
-        ratio = old_size/self.new_tile_size
 
         x, y, width, height = self.calculate_bounds()
         # Create xbounds and ybounds
-        temp_x = int(self.current_object.location_of_screen_on_map_and_zoom_level[0]//ratio)
-        temp_y = int(self.current_object.location_of_screen_on_map_and_zoom_level[1]//ratio)
-        self.current_object.location_of_screen_on_map_and_zoom_level = (temp_x, temp_y, temp_zoom)
-        x, y, width, height = self.calculate_bounds()
-
-        self.xbounds = slice( (((x // self.new_tile_size) - 2)), (((x // self.new_tile_size + width) + 2)) )
-        #print(old_size/self.new_tile_size)
-        self.ybounds = slice( (((y // self.new_tile_size) - 2)), (((y // self.new_tile_size + height) + 2)))
+        self.xbounds = slice((x // self.new_tile_size) - 2, (x // self.new_tile_size + width) + 2)
+        self.ybounds = slice((y // self.new_tile_size) - 2, (y // self.new_tile_size + height) + 2)
         self.load_objects_to_currently_drawn_map()
 
 
@@ -599,11 +577,10 @@ class EditorPane:
         if event_.type == pygame.MOUSEBUTTONDOWN and event_.button == 1:
             mouse_x, mouse_y = event_.pos
             for unique_id, rectangle_ in self.currently_interactable_rectangles.items():
+
                 if rectangle_["rectangle"].collidepoint(mouse_x, mouse_y):
                     self.current_object.selected_editor_asset_or_tile = (unique_id, rectangle_["type"])
                     break
-
-
 
     def load_map_array_images_for_drawing(self):
         for y in range(len(self.map_array)):
@@ -670,9 +647,9 @@ class CurrentObjects:
         self.run = True
         self.editor_state = 1
         self.location_of_screen_on_map_and_zoom_level = (
-        3000, 3000, 1)  # 5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
+        3000, 3000, 5)  # 5 is regular zoom, will move log2() up or down (so 4 is zoom level shows twice as much).
         self.OLD_location_of_screen_on_map_and_zoom_level = (
-        3000, 3000, 1)  # zoom of 5 means that the regular tile size is 5 times smaller than what it will be
+        3000, 3000, 5)  # zoom of 5 means that the regular tile size is 5 times smaller than what it will be
         self.TILE_SIZE_WORLD = 50
         self.img_scale_type_dict = img_scale_type_dict_
         self.TILE_SIZE_EDITOR = 100
@@ -696,8 +673,8 @@ class CurrentObjects:
 
     def perform_loop_actions(self):  # checks the currently drawn and interactable objects and runs their draw and handle_events code
         self.screen.blit(self.background, (0, 0))
-        self.keys = pygame.key.get_pressed()
         self.mouse = pygame.mouse.get_pressed()
+        self.keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.run = False
@@ -707,43 +684,21 @@ class CurrentObjects:
             for interactable in self.currently_interatable_objects:
                 interactable.handle_events(event)
 
-        if any(isinstance(obj, WorldMap) for obj in self.currently_interatable_objects):
+        if any(isinstance(obj, FishMaps) for obj in self.currently_interatable_objects):
             for index, obj in enumerate(self.currently_interatable_objects):
-                if isinstance(obj, WorldMap):
-                   map_move_distance_size =  (self.TILE_SIZE_WORLD)//5
-                   if self.keys[pygame.K_LEFT]:
-                       obj.update_map_bounds(-map_move_distance_size, 0)
+                if isinstance(obj, FishMaps):
+                    map_move_distance_size = (self.TILE_SIZE_WORLD) // 5
+                    if self.keys[pygame.K_LEFT]:
+                        obj.update_map_bounds(-map_move_distance_size, 0)
 
-                   if self.keys[pygame.K_RIGHT]:
-                       obj.update_map_bounds(+map_move_distance_size, 0)
+                    if self.keys[pygame.K_RIGHT]:
+                        obj.update_map_bounds(+map_move_distance_size, 0)
 
-                   if self.keys[pygame.K_UP]:
-                       obj.update_map_bounds(0, -map_move_distance_size)
+                    if self.keys[pygame.K_UP]:
+                        obj.update_map_bounds(0, -map_move_distance_size)
 
-                   if self.keys[pygame.K_DOWN]:
-                       obj.update_map_bounds(0, +map_move_distance_size)
-
-                   x_start = self.location_of_screen_on_map_and_zoom_level[0]
-                   y_start = self.location_of_screen_on_map_and_zoom_level[1]
-                   if self.mouse[0]:
-                       mouse_x, mouse_y = pygame.mouse.get_pos()
-                       if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
-                           map_x = (mouse_x + x_start) // obj.new_tile_size
-                           map_y = (mouse_y + y_start) // obj.new_tile_size
-                           if self.selected_editor_asset_or_tile[1] != "deleted":
-                               if self.selected_editor_asset_or_tile[1] == "tile":
-                                   obj.tile_map[map_x, map_y] = self.selected_editor_asset_or_tile[0]
-                               elif self.selected_editor_asset_or_tile[1] == "asset":
-                                   obj.asset_map[map_x, map_y] = self.selected_editor_asset_or_tile[0]
-
-                   ### Code for deleting assets by right click
-                   elif self.mouse[2] == True:
-                       mouse_x, mouse_y = pygame.mouse.get_pos()
-                       if mouse_x < MAP_EDITOR_PANE_RATIO * WIDTH:
-                           map_x = (mouse_x + x_start) // obj.new_tile_size
-                           map_y = (mouse_y + y_start) // obj.new_tile_size
-                           obj.asset_map[map_x, map_y] = 0
-
+                    if self.keys[pygame.K_DOWN]:
+                        obj.update_map_bounds(0, +map_move_distance_size)
 
         for drawable in self.currently_drawn_objects:
             drawable.draw(self.screen)
@@ -758,8 +713,8 @@ class CurrentObjects:
         return selected_maps_
 
     def load_empty_map_to_current(self):
-        current_map = WorldMap(self, self.img_scale_type_dict)
-        current_map.create_empty_world_map()
+        current_map = FishMaps(self, self.img_scale_type_dict)
+        current_map.create_empty_Fish_Maps()
         current_map.define_bounds_of_currently_drawn_map()
         self.currently_drawn_objects = [current_map]
         editing_pane = EditorPane(self, self.img_scale_type_dict, self.TILE_SIZE_EDITOR, self.map_array)
@@ -770,8 +725,8 @@ class CurrentObjects:
         self.currently_interatable_objects.append(current_map)
 
     def load_existing_map_to_current(self,map_name):
-        current_map = WorldMap(self, self.img_scale_type_dict)
-        current_map.load_world_map_from_json(map_name)
+        current_map = FishMaps(self, self.img_scale_type_dict)
+        current_map.load_Fish_Maps_from_json(map_name)
         current_map.define_bounds_of_currently_drawn_map()
         self.currently_drawn_objects = [current_map]
         editing_pane = EditorPane(self, self.img_scale_type_dict, self.TILE_SIZE_EDITOR, self.map_array)
@@ -805,6 +760,7 @@ class CurrentObjects:
 # if that is the case, check if from that point onwards, additional necessary rows and columns are empty
 # if so, add in the image. On the next loop, check the map array again to find new empty places
 
+
 pygame.init()
 
 WIDTH = 1800
@@ -817,19 +773,16 @@ TILE_SIZE_EDITOR = 100
 SCALES = (100, 100)
 fps = 300
 timer = pygame.time.Clock()
-print("World Map Editor")
-pygame.display.set_caption('World Map Editor')
+pygame.display.set_caption('Fish map editor')
 
 parent_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-world_map_img_location = os.path.join(parent_directory, 'Assets/Images/World_Map_Static/')
-available_maps_location = os.path.join(parent_directory, 'Assets/Maps/World_Maps/')
+Fish_Maps_img_location = os.path.join(parent_directory, 'Assets/Images/Fish_Maps_Static/')
+available_maps_location = os.path.join(parent_directory, 'Assets/Maps/Fishing_Maps/')
 
-img_scale_type_dict = check_and_load_image_dict(world_map_img_location)
-
-
+img_scale_type_dict = check_and_load_image_dict(Fish_Maps_img_location)
 map_array = create_map_from_images(img_scale_type_dict, HEIGHT, TILE_SIZE_EDITOR)
 filtered_map_array = filter_array(map_array)
-available_maps = check_available_world_maps(available_maps_location)
+available_maps = check_available_Fish_Maps(available_maps_location)
 
 
 main_rect = calculate_main_rect_editor()
@@ -853,7 +806,6 @@ while main_current_object.run:
     timer.tick(fps)
     main_current_object.perform_loop_actions()
     clock.tick()
-    #print(clock.get_fps())
     # if editor_state == 1:  # world_map_selector
     #     screen.blit(PLACEHOLDER_BACKGROUND, (0, 0))
     #     choose_from_available_world_maps(currently_selected_maps, min_row_height, amount_of_rows)
