@@ -427,7 +427,7 @@ class WorldMap:
         with open(location_, 'r') as json_file:
             data = json.load(json_file)
             self.size = tuple(data['size'])
-            self.name = data['name']
+            self.name = os.path.splitext(os.path.basename(location_))[0]
             self.last_edited = data['last_edited']
             self.time_created = data['time_created']
             self.tile_map = np.array(data['tile_map'])
@@ -481,14 +481,14 @@ class WorldMap:
             map_shape = self.tile_map.shape
             for x in range(self.xbounds.start, self.xbounds.stop - 2):
                 for y in range(self.ybounds.start, self.ybounds.stop):
-                    if x >= 0 and y>= 0 and x <= map_shape[0] and y <= map_shape[1]:
+                    if x >= 0 and y>= 0 and x < map_shape[0] and y < map_shape[1]:
                         if self.tile_map[x][y] in self.image_dict:
                             surface.blit(self.image_dict[self.tile_map[x][y]]["loaded_image"],
                                          ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
 
             for x in range(self.xbounds.start, self.xbounds.stop - 2):
                 for y in range(self.ybounds.start, self.ybounds.stop):
-                    if x >= 0 and y >= 0 and x <= map_shape[0] and y <= map_shape[1]:
+                    if x >= 0 and y >= 0 and x < map_shape[0] and y < map_shape[1]:
                         if self.asset_map[x][y] in self.image_dict:
                             surface.blit(self.image_dict[self.asset_map[x][y]]["loaded_image"],
                                          ((self.new_tile_size * x) - x_start, (self.new_tile_size * y) - y_start))
@@ -732,6 +732,7 @@ class CurrentObjects:
                            map_y = (mouse_y + y_start) // obj.new_tile_size
                            if self.selected_editor_asset_or_tile[1] != "deleted":
                                if self.selected_editor_asset_or_tile[1] == "tile":
+                                   print(map_x, map_y)
                                    obj.tile_map[map_x, map_y] = self.selected_editor_asset_or_tile[0]
                                elif self.selected_editor_asset_or_tile[1] == "asset":
                                    obj.asset_map[map_x, map_y] = self.selected_editor_asset_or_tile[0]

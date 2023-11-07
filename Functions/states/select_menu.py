@@ -14,6 +14,20 @@ class SelectMenu(State):
     def update(self, delta_time, actions):
         if actions["left_click"]:
             self.determine_clicked_option()
+        if actions["1"]:
+            self.selected_option = "New Game"
+            self.transition_state()
+        if actions["2"]:
+            self.selected_option = "Load Game"
+            self.transition_state()
+        if actions["3"]:
+            self.selected_option = "Options"
+            self.transition_state()
+        if actions["4"]:
+            self.selected_option = "Exit"
+            self.transition_state()
+
+
         self.game.reset_keys()
 
     def render(self, display):

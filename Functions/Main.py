@@ -10,12 +10,13 @@ class Game:
     def __init__(self):
         pygame.init()
         self.GAME_W, self.GAME_H = 480, 270
-        self.SCREEN_WIDTH, self.SCREEN_HEIGHT = 960, 540
+        self.SCREEN_WIDTH, self.SCREEN_HEIGHT = 1920, 1080
         self.ratio_x, self.ratio_y = self.SCREEN_WIDTH//self.GAME_W, self.SCREEN_HEIGHT//self.GAME_H
         self.game_canvas = pygame.Surface((self.GAME_W, self.GAME_H))
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         self.running, self.playing = True, True
-        self.actions = {"left": False, "right": False, "forward": False, "backward": False, "action1": False, "action2": False, "start": False, "left_click": False }
+        self.actions = {"left": False, "right": False, "forward": False, "backward": False, "action1": False, "action2": False, "start": False, "left_click": False,
+                        "f_anchor": False, "1": False, "2": False, "3": False, "4": False }
         self.dt, self.prev_time = 0, 0
         self.state_stack = []
         self.TILE_SIZE_WORLD = 100
@@ -24,11 +25,14 @@ class Game:
         self.load_states()
 
 
+
     def load_assets(self):
         self.parent_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         self.world_map_static_dir = os.path.join(self.parent_directory, 'Assets/Images/World_Map_Static/')
         self.world_map_tiles_dir = os.path.join(self.world_map_static_dir, "Tiles")
         self.world_map_assets_dir = os.path.join(self.world_map_static_dir, "Assets")
+
+        ###/// refactor to over_world
         self.img_scale_type_dict = self.check_and_load_image_dict(self.world_map_static_dir)
         self.new_tile_size = self.TILE_SIZE_WORLD // self.ZOOM_LEVEL
         for item in self.img_scale_type_dict.values():
@@ -68,8 +72,19 @@ class Game:
                     self.actions['forward'] = True
                 if event.key == pygame.K_s:
                     self.actions['backward'] = True
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_SPACE:
                     self.actions['start'] = True
+                if event.key == pygame.K_f:
+                    self.actions['f_anchor'] = True
+
+                if event.key == pygame.K_1:
+                    self.actions['1'] = True
+                if event.key == pygame.K_2:
+                    self.actions['2'] = True
+                if event.key == pygame.K_3:
+                    self.actions['3'] = True
+                if event.key == pygame.K_4:
+                    self.actions['4'] = True
 
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_a:
@@ -80,8 +95,18 @@ class Game:
                     self.actions['forward'] = False
                 if event.key == pygame.K_s:
                     self.actions['backward'] = False
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_SPACE:
                     self.actions['start'] = False
+                if event.key == pygame.K_f:
+                    self.actions['f_anchor'] = False
+                if event.key == pygame.K_1:
+                    self.actions['1'] = False
+                if event.key == pygame.K_2:
+                    self.actions['2'] = False
+                if event.key == pygame.K_3:
+                    self.actions['3'] = False
+                if event.key == pygame.K_4:
+                    self.actions['4'] = False
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.actions["left_click"] = True

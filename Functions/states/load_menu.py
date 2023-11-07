@@ -1,5 +1,6 @@
 import pygame, os, json
 from states.state import State
+from states.over_world import OverWorld
 
 class LoadMenu(State):
     def __init__(self, game):
@@ -20,6 +21,8 @@ class LoadMenu(State):
             display.blit(menu.text_surface, menu.rect)
 
     def transition_state(self):
+        new_state = OverWorld(self.game, self.selected_option )
+        new_state.enter_state()
         pass
 
 
@@ -28,7 +31,7 @@ class LoadMenu(State):
         mouse_x, mouse_y = mouse_x // self.game.ratio_x, mouse_y // self.game.ratio_x
         for choice in self.menu_choices:
             if choice.rect.collidepoint(mouse_x, mouse_y):
-                self.selected_option = choice
+                self.selected_option = choice.save_dict
                 self.transition_state()
 
     def create_menu_options(self):
