@@ -8,7 +8,7 @@ class OverWorld(State):
         self.save_file = save_file
         self.load_game_settings()
         self.load_map_to_world()
-        self.tile_size = 15
+        self.tile_size = 50
 
     def update(self, delta_time, actions):
         self.player.update(delta_time, actions)
@@ -147,5 +147,8 @@ class PlayerBoat:
 
     ### TODO
     # COLLISION MAPPING in OVERWORLD
-    # ship loading/animation
-    # 
+    # when collide, set accel to 0, speed to opposite *0.1
+    # ship loading
+    # ship animation
+    # change naming convention to include sea/land for collision map
+

@@ -14,13 +14,17 @@ def create_dictionary_from_image_name(world_map_img_location_file,
 
     parts = image_name[0].split("_")
 
-    if len(parts) != 7:
+    if len(parts) != 8:
         raise ValueError("Invalid image name format: " + image_name[0])
 
         # Extract the relevant information from the image name
-    wm, p, tile_type, name, number, x, y = parts
+    wm, p, tile_type, name, collide, number, x, y = parts
     x, y = int(x), int(y)
 
+    if collide == "collide":
+        collide = True
+    elif collide == "nocol":
+        collide = False
     # Load the image using Pygame
     image = (os.path.join(world_map_img_location_file, image_name[0] + image_name[1]))
 
@@ -29,6 +33,7 @@ def create_dictionary_from_image_name(world_map_img_location_file,
         "image": image,
         "x_scale": x,
         "y_scale": y,
+        "collide": collide,
         "type": tile_type
     }
 
